@@ -88,7 +88,7 @@ class fzjDataset(data.Dataset):
 
     def get_pix_size_dic(self):
         spacings_dic = {}
-        with open("/data/mrs/fzj_data4/spacing.txt", 'r') as f:
+        with open("/data/fzj_data4/spacing.txt", 'r') as f:
             spacings = f.readlines()
             for i in range(len(spacings)):
                 spacings_dic[spacings[i].split('|')[0]] = float(
