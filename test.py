@@ -2,34 +2,23 @@ import argparse
 import logging
 import time
 from torch.utils.data import DataLoader
-from lion import Lion
 import pingouin as pg
 import seaborn as sns
 import math
 from torch import optim
-from UNet import Unet, resnet34_unet, resnet101_unet,MTUnet,AAUnet
-from attention_unet import AttU_Net
-from channel_unet import myChannelUnet
+from UNet import Unet, resnet34_unet
 from loss import *
-from r2unet import R2U_Net
-from segnet import SegNet
 from unetpp import NestedUNet
-from fcn import get_fcn8s
 from dataset import *
 from metrics import *
 from torchvision.transforms import transforms
 from plot import loss_plot
 from plot import metrics_plot
-from cenet_ocr import *
-from cenet import CE_Net_,MTCE_Net
-from cenetppp import *
 from lib.loss.loss_contrast import *
 from edge_loss import *
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import roc_curve, roc_auc_score
-from unet.UNet3Plus import UNet3Plus
-from seg_model import deeplab,highresnet,miniseg,pspnet,efficientseg
 import cv2
 
 def getArgs():
@@ -39,10 +28,10 @@ def getArgs():
     parse.add_argument("--epoch", type=int, default=100)
     parse.add_argument("--testepoch", type=int, default=54)
     parse.add_argument('--arch', '-a', metavar='ARCH', default='resnet34_unet',
-                       help='UNet/resnet34_unet/unet++/myChannelUnet/Attention_UNet/segnet/r2unet/fcn32s/fcn8s')
+                       help='UNet/resnet34_unet/unet++')
     parse.add_argument("--batch_size", type=int, default=8)
     parse.add_argument('--dataset', default='mydataset',  # dsb2018_256
-                       help='dataset name:liver/esophagus/dsb2018Cell/corneal/driveEye/isbiCell/kaggleLung')
+                       help='dataset')
     # parse.add_argument("--ckp", type=str, help="the path of model weight file")
     parse.add_argument("--log_dir", default='result/log', help="log dir")
 
@@ -62,32 +51,6 @@ def getLog(args):
     )
     return logging
 
-
-def uncertainty_estimate(output, task):
-    """
-    使用贝叶斯估计方法计算输出结果的不确定性估计。
-
-    Args:
-        output: 模型输出的结果，shape 为 [batch_size, num_classes] 或 [batch_size, num_classes, height, width]，根据不同任务可能有不同尺寸。
-        task: 当前任务的名称，可以是 "classification" 或 "segmentation"。
-
-    Returns:
-        uncertainty: 输出结果的不确定性估计，shape 为 [batch_size]。
-    """
-    with torch.no_grad():
-        if task == "classification":
-            # 对分类任务的输出进行 softmax 转换
-            softmax_output = torch.softmax(output, dim=-1)
-            max_probs, _ = torch.max(softmax_output, dim=-1)
-            uncertainty = 1 - max_probs
-        elif task == "segmentation":
-            # 对分割任务的输出取平均值，并进行 softmax 转换
-            softmax_output = torch.softmax(output, dim=1)
-            mean_probs = torch.mean(softmax_output, dim=(1,2))
-            max_probs, _ = torch.max(mean_probs, dim=-1)
-            uncertainty = 1 - max_probs
-
-    return uncertainty
 
 def getModel(args):
     if args.arch == 'UNet':
